@@ -1,0 +1,72 @@
+{
+  "$schema": "https://agentskills.org/v1/skill.json",
+  "name": "gitcompass_triage",
+  "version": "1.0.0",
+  "description": "Analyzes open-source repo context and maps GitHub issues to file changes, test requirements, unified diffs, and PR blueprints.",
+  "author": "GitCompass Open-Source Contributors",
+  "license": "MIT",
+  "homepage": "https://github.com/gitcompass/gitcompass",
+  "capabilities": [
+    "repository_tree_parsing",
+    "issue_root_cause_analysis",
+    "pr_blueprint_synthesis",
+    "test_case_generation",
+    "conventional_commit_formatting"
+  ],
+  "inputs": {
+    "repo_name": {
+      "type": "string",
+      "description": "Target repository identifier, e.g., 'expressjs/express' or 'facebook/react'"
+    },
+    "file_tree": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Array of repository file paths relative to root"
+    },
+    "issue_title": {
+      "type": "string",
+      "description": "Title of the GitHub issue or bug report"
+    },
+    "issue_body": {
+      "type": "string",
+      "description": "Full description, reproduction steps, or stack trace"
+    }
+  },
+  "outputs": {
+    "architecture_summary": {
+      "type": "string",
+      "description": "Executive summary of relevant codebase modules and architectural flow"
+    },
+    "target_files": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of files that must be modified to resolve the issue"
+    },
+    "root_cause_or_design": {
+      "type": "string",
+      "description": "Root cause analysis or architectural design rationale"
+    },
+    "pr_gameplan": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Sequential steps required to implement and verify the PR"
+    },
+    "test_cases": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Concrete test descriptions and assertions required for regression prevention"
+    },
+    "commit_message": {
+      "type": "string",
+      "description": "Conventional commit message conforming to Angular/Conventional Commits spec"
+    }
+  }
+}
