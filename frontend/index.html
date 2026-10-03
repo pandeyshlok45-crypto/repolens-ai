@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitCompass — Open-Weight OSS Contributor Agent</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #090d16; color: #f1f5f9; }
+    pre, code { font-family: 'JetBrains Mono', monospace; }
+  </style>
+</head>
+<body class="min-h-screen">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState } = React;
+
+    function App() {
+      const [repoName, setRepoName] = useState("expressjs/express");
+      const [files, setFiles] = useState("lib/application.js\nlib/router/index.js\nlib/router/layer.js\nlib/middleware/init.js\ntest/app.use.js\npackage.json");
+      const [issueTitle, setIssueTitle] = useState("TypeError: app.use() requires a middleware function");
+      const [issueBody, setIssueBody] = useState("When app.use() is passed undefined or a non-function, it throws a cryptic TypeError later during dispatch instead of failing fast with an explanatory Error during setup.");
+      const [loading, setLoading] = useState(false);
+      const [result, setResult] = useState(null);
+      const [error, setError] = useState(null);
+
+      const handleSampleLoad = (type) => {
+        if (type === "react") {
+          setRepoName("facebook/react");
+          setFiles("packages/react/src/ReactHooks.js\npackages/react-reconciler/src/ReactFiberHooks.js\npackages/react/index.js");
+          setIssueTitle("Warn on mismatched hook invocation in development");
+          setIssueBody("Add dev-only warning when useTransition is called outside a valid component fiber context.");
+        } else {
+          setRepoName("expressjs/express");
+          setFiles("lib/application.js\nlib/router/index.js\nlib/router/layer.js\nlib/middleware/init.js\ntest/app.use.js\npackage.json");
+          setIssueTitle("TypeError: app.use() requires a middleware function");
+          setIssueBody("When app.use() is passed undefined or a non-function, it throws a cryptic TypeError later during dispatch instead of failing fast with an explanatory Error during setup.");
+        }
+      };
+
+      const handleAnalyze = async () => {
+        setLoading(true);
+        setError(null);
+        setResult(null);
+
+        const fileList = files.split("\n").map(f => f.trim()).filter(Boolean);
+
+        try {
+          const resp = await fetch("http://localhost:8000/api/triage", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              repo_name: repoName,
+              file_tree: fileList,
+              issue_title: issueTitle,
+              issue_body: issueBody
+            })
+          });
+
+          if (!resp.ok) {
+            const errData = await resp.json();
+            throw new Error(errData.detail || "Triaging failed");
+          }
+
+          const data = await resp.json();
+          setResult(data);
+        } catch (err) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div class="max-w-6xl mx-auto px-4 py-8">
+          <header class="flex flex-col md:flex-row md:items-center justify-between pb-8 border-b border-slate-800 gap-4">
+            <div>
+              <div class="flex items-center gap-3">
+                <div class="h-10 w-10 bg-amber-500 rounded-lg flex items-center justify-center font-bold text-black text-xl">
+                  🧭
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight">GitCompass</h1>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-950 text-emerald-400 border border-emerald-800">
+                  Open-Weight AI Agent
+                </span>
+              </div>
+              <p class="text-sm text-slate-400 mt-1">
+                Triage unfamiliar open-source repos & craft first-time Pull Requests with Llama 3.1 & Qwen 2.5
+              </p>
+            </div>
+            <div>
+              <a 
+                href="http://localhost:8000/skill" 
+                target="_blank" 
+                class="text-xs bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-md border border-slate-700 text-slate-300 font-mono"
+              >
+                Agent Skill Manifest (JSON)
+              </a>
+            </div>
+          </header>
+
+          <div class="mt-6 flex items-center gap-2 text-xs">
+            <span class="text-slate-500">Quick Samples:</span>
+            <button 
+              onClick={() => handleSampleLoad("express")}
+              class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-800 rounded border border-slate-700 text-slate-300 cursor-pointer"
+            >
+              Express.js Issue
+            </button>
+            <button 
+              onClick={() => handleSampleLoad("react")}
+              class="px-2.5 py-1 bg-slate-800/80 hover:bg-slate-800 rounded border border-slate-700 text-slate-300 cursor-pointer"
+            >
+              React Fiber Issue
+            </button>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div class="lg:col-span-5 space-y-4">
+              <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl shadow-sm">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                  Target Repository
+                </label>
+                <input 
+                  type="text" 
+                  value={repoName} 
+                  onChange={(e) => setRepoName(e.target.value)}
+                  class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500 font-mono"
+                />
+
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mt-4 mb-1">
+                  Key Repo File Tree
+                </label>
+                <textarea 
+                  rows="6"
+                  value={files}
+                  onChange={(e) => setFiles(e.target.value)}
+                  class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 font-mono focus:outline-none focus:border-amber-500"
+                />
+
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mt-4 mb-1">
+                  Issue Title
+                </label>
+                <input 
+                  type="text"
+                  value={issueTitle}
+                  onChange={(e) => setIssueTitle(e.target.value)}
+                  class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500"
+                />
+
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mt-4 mb-1">
+                  Issue Description / Bug Report
+                </label>
+                <textarea 
+                  rows="4"
+                  value={issueBody}
+                  onChange={(e) => setIssueBody(e.target.value)}
+                  class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs text-slate-300 focus:outline-none focus:border-amber-500"
+                />
+
+                <button
+                  onClick={handleAnalyze}
+                  disabled={loading}
+                  class="mt-5 w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 font-bold py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 transition cursor-pointer"
+                >
+                  {loading ? "Synthesizing Repo Context..." : "Analyze & Generate PR Blueprint"}
+                </button>
+              </div>
+
+              {error && (
+                <div class="p-4 bg-red-950/60 border border-red-800/80 rounded-xl text-red-300 text-xs">
+                  <strong>Error:</strong> {error}
+                </div>
+              )}
+            </div>
+
+            <div class="lg:col-span-7">
+              {!result && !loading && (
+                <div class="h-full border border-dashed border-slate-800 rounded-xl flex flex-col items-center justify-center p-12 text-center text-slate-500">
+                  <div class="text-4xl mb-3">⚡</div>
+                  <p class="font-medium text-slate-300">Ready to triage</p>
+                  <p class="text-xs text-slate-500 max-w-sm mt-1">
+                    Hit "Analyze & Generate PR Blueprint" to feed the repository structure and issue into the open-weight model harness.
+                  </p>
+                </div>
+              )}
+
+              {result && (
+                <div class="space-y-5">
+                  <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+                    <div class="flex items-center justify-between mb-2">
+                      <span class="text-xs font-mono uppercase text-amber-400">Architecture Context</span>
+                      <span class="text-[10px] bg-slate-800 px-2 py-0.5 rounded text-slate-400 font-mono">
+                        Model: {result.model_used}
+                      </span>
+                    </div>
+                    <p class="text-sm text-slate-300 mb-3">{result.analysis.architecture_summary}</p>
+                    
+                    <h3 class="text-xs font-mono uppercase text-slate-400 mt-4 mb-1">Root Cause / Design Rationale</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed bg-slate-950 p-3 rounded-lg border border-slate-800/80">
+                      {result.analysis.root_cause_or_design}
+                    </p>
+                  </div>
+
+                  <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+                    <h3 class="text-xs font-mono uppercase text-slate-400 mb-3">Files to Modify</h3>
+                    <div class="flex flex-wrap gap-2">
+                      {result.analysis.target_files.map((file, idx) => (
+                        <span key={idx} class="px-2.5 py-1 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono rounded">
+                          📁 {file}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl">
+                    <h3 class="text-xs font-mono uppercase text-slate-400 mb-3">Pull Request Implementation Blueprint</h3>
+                    <ol class="space-y-2.5">
+                      {result.analysis.pr_gameplan.map((step, idx) => (
+                        <li key={idx} class="flex items-start gap-3 text-xs text-slate-300">
+                          <span class="h-5 w-5 rounded-full bg-slate-800 text-amber-400 font-mono flex items-center justify-center shrink-0 text-[10px]">
+                            {idx + 1}
+                          </span>
+                          <span class="mt-0.5">{step}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                      <h4 class="text-xs font-mono uppercase text-slate-400 mb-2">Required Test Cases</h4>
+                      <ul class="space-y-1.5 text-xs text-slate-300">
+                        {result.analysis.test_cases.map((test, idx) => (
+                          <li key={idx} class="flex items-start gap-2">
+                            <span class="text-emerald-400">✓</span>
+                            <span>{test}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                      <h4 class="text-xs font-mono uppercase text-slate-400 mb-2">Conventional Commit</h4>
+                      <div class="bg-slate-950 p-2.5 rounded border border-slate-800 font-mono text-xs text-amber-300">
+                        {result.analysis.commit_message}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
